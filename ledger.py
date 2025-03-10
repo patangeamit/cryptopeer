@@ -8,14 +8,17 @@ class Transaction:
     receiver: str
     amount: int
     signature: str
+    public_key: str
 
 
 class Ledger:
-    transactions = []
+    def __init__(self):
+        self.transactions = []
 
-    def add(self, sender, receiver, amount, signature):
-        transaction = Transaction(sender, receiver, amount, signature)
+    def add(self, sender, receiver, amount, signature, public_key):
+        transaction = Transaction(sender, receiver, amount, signature, public_key)
         self.transactions.append(transaction)
+        return transaction
 
     def print(self, name):
         print(f"{name}'s Ledger")
