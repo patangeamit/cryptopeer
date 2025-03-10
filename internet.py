@@ -31,8 +31,7 @@ class Internet:
 
     def broadcast_transaction(self, transaction: Transaction):
         for peer in self.peers.values():
-            if transaction.sender != peer.address:
-                peer.incoming_transaction(transaction)
+            peer.incoming_transaction(transaction)
 
     def log_data(self):
         print("Peer count: ", self.peer_count)

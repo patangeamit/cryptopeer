@@ -1,10 +1,15 @@
+from __future__ import annotations
 import time
+from typing import TYPE_CHECKING
 from ledger import Ledger, Transaction
 from crypto import Crypto
 
+if TYPE_CHECKING:
+    from internet import Internet
+
 
 class Peer:
-    network = None
+    network: Internet | None = None
     balance = 0
     address = 0
     public_key = ""
@@ -12,7 +17,7 @@ class Peer:
 
     def __init__(
         self,
-        network=None,
+        network: Internet | None = None,
         balance: int = 0,
         address: str = "",
     ):
@@ -29,32 +34,51 @@ class Peer:
         if amount > self.balance:
             self.log("Insufficient balance")
             return
-        reciever = self.network.get_peer(address)
-        if reciever is None:
+        receiver = self.network.get_peer(address)
+        receiver_public_key = receiver.public_key
+        if receiver is None:
             self.log("Peer not found")
             return
-        reciever.receive(amount)
+        receiver.receive(amount)
         signature = Crypto.get_signature(
-            f"{self.address}&{amount}&{address}", self.private_key
+            f"{self.public_key}&{amount}&{receiver_public_key}", self.private_key
         )
-        transaction = self.ledger.add(self.address, address, amount, signature, self.public_key)
-        self.ledger.print(self.address)
+        transaction = self.ledger.create_transaction(
+            self.public_key, receiver_public_key, amount, signature, 10
+        )
         self.balance -= amount
         self.network.broadcast_transaction(transaction)
+        self.ledger.print(self.address)
 
     def receive(self, amount: int):
         self.balance += amount
 
     def incoming_transaction(self, transaction: Transaction):
         # Verify the transaction
-        message = f"{transaction.sender}&{transaction.amount}&{transaction.receiver}"
-        if Crypto.verify_signature(message, transaction.public_key, transaction.signature):
-            self.ledger.add(transaction.sender, transaction.receiver, transaction.amount, transaction.signature, transaction.public_key)
+        message = f"{transaction.sender_public_key}&{transaction.amount}&{transaction.receiver_public_key}"
+        if Crypto.verify_signature(
+            message, transaction.sender_public_key, transaction.signature
+        ):
+            self.ledger.add(transaction)
         else:
-            self.log("Invalid transaction")
+            self.log("\033[91mInvalid transaction\033[0m")
 
     def log(self, message: str):
         print("{}: {}".format(self.address, message))
 
     def logbalance(self):
         self.log(f"Balance: {self.balance}")
+
+
+class BadPeer(Peer):
+    pass
+    # def send(self, amount: int, address: str):
+    #     # This mf tries to steal money from other peers by adding a fake transaction to the ledger
+    #     signature = Crypto.get_signature(
+    #         f"{self.address}&{amount}&{address}", self.private_key
+    #     )
+    #     transaction = self.ledger.create_transaction(
+    #         address, self.address, amount, signature, self.public_key
+    #     )
+    #     self.ledger.print(self.address)
+    #     self.network.broadcast_transaction(transaction)
